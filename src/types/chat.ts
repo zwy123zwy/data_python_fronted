@@ -16,7 +16,7 @@ export interface ChatSession {
   title: string;
   status?: string;
   isPinned: boolean;
-  userId: string;
+  userId: number;
   createTime: string;
   updateTime: string;
 }
@@ -34,7 +34,7 @@ export interface ChatMessage {
 
 export interface CreateSessionRequest {
   title: string;
-  userId: string;
+  userId: number;
 }
 
 export interface SaveMessageRequest {

@@ -78,7 +78,7 @@ const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelect
     try {
       const res = await chatService.createSession(agent.id, {
         title: '新对话',
-        userId: 'default',
+        userId: 1,
       });
       const session = res.data.data as ChatSession;
       if (session) {
@@ -122,7 +122,7 @@ const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelect
     try {
       await chatService.deleteSession(sessionId);
       if (sessionId === currentSessionId) {
-        onSelectSession({ id: '', agentId: agent.id, title: '', isPinned: false, userId: '', createTime: '', updateTime: '' } as ChatSession);
+        onSelectSession({ id: '', agentId: agent.id, title: '', isPinned: false, userId: 0, createTime: '', updateTime: '' } as ChatSession);
       }
       fetchSessions();
     } catch { message.error('删除失败'); }

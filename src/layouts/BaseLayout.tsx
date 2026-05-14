@@ -55,7 +55,7 @@ function BaseLayout({ children }: BaseLayoutProps) {
             数据智能体平台
           </Link>
           <Button size="small" type="primary" icon={<PlusOutlined />} onClick={() => navigate('/agent/create')}>
-            Create Agent → 创建智能体
+            创建智能体
           </Button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

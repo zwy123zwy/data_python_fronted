@@ -2,7 +2,8 @@
 
 declare global {
   interface Window {
-    copyTextToClipboard: (text: string) => void;
+    copyCodeBlock: (btn: HTMLElement) => void;
+    resultSetPage: (btn: HTMLElement, direction: 'prev' | 'next') => void;
   }
 }
 export {};

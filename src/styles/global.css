@@ -1583,3 +1583,202 @@ body {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
   font-size: 12px !important;
 }
+
+/* ========================================
+   结果集表格样式 (aligned from Vue AgentRun)
+   Used by HTML generated in generateResultSetTable
+   ======================================== */
+.result-set-container {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.result-set-header {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.result-set-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #606266;
+}
+
+.result-set-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.result-set-pagination-info {
+  font-size: 14px;
+  color: #606266;
+}
+
+.result-set-pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.result-set-pagination-btn {
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  background: white;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.result-set-pagination-btn:hover:not(:disabled) {
+  background: #f5f7fa;
+  border-color: #c6e2ff;
+}
+
+.result-set-pagination-btn:disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+  background: #f5f7fa;
+}
+
+.result-set-table-container {
+  overflow-x: auto;
+  position: relative;
+}
+
+.result-set-page {
+  display: none;
+}
+
+.result-set-page-active {
+  display: block;
+}
+
+.result-set-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.result-set-table th {
+  background: #f5f7fa;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #606266;
+  border-bottom: 1px solid #e8e8e8;
+  white-space: nowrap;
+}
+
+.result-set-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  word-break: break-word;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-set-table tr:hover {
+  background: #f5f7fa;
+}
+
+.result-set-empty-cell {
+  text-align: center;
+  color: #909399;
+  padding: 20px;
+}
+
+.result-set-error {
+  background: #fef0f0;
+  color: #f56c6c;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 8px 0;
+  border: 1px solid #fbc4c4;
+}
+
+.result-set-empty {
+  background: #f4f4f5;
+  color: #909399;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.result-set-message {
+  width: 100%;
+}
+
+/* 报告全屏相关 */
+.report-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.report-fullscreen-container {
+  width: 100%;
+  max-width: 1200px;
+  height: 90vh;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.report-fullscreen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #f8f9fa;
+  flex-shrink: 0;
+}
+
+.report-fullscreen-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.report-fullscreen-close {
+  flex-shrink: 0;
+}
+
+.report-fullscreen-content {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+.report-fullscreen-body {
+  min-height: 100%;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .result-set-table-container {
+    font-size: 12px;
+  }
+
+  .result-set-table th,
+  .result-set-table td {
+    padding: 6px 8px;
+  }
+}
