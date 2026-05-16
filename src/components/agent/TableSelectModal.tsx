@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Checkbox, Button, Space, message, Spin } from 'antd';
+import { Modal, Checkbox, Button, Space, Spin, App } from 'antd';
 import { datasourceService } from '../../services/datasource';
 import { agentDatasourceService } from '../../services/agentDatasource';
 import type { AgentDatasource } from '../../types';
@@ -13,6 +13,7 @@ interface Props {
 }
 
 const TableSelectModal: React.FC<Props> = ({ open, agentId, datasource, onClose, onSaved }) => {
+  const { message } = App.useApp();
   const [allTables, setAllTables] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);

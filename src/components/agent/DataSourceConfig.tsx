@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Tag, Switch, message, Popconfirm } from 'antd';
+import { Table, Button, Space, Tag, Switch, Popconfirm, App } from 'antd';
 import { PlusOutlined, ReloadOutlined, DeleteOutlined, TableOutlined } from '@ant-design/icons';
 import { agentDatasourceService } from '../../services/agentDatasource';
 import type { AgentDatasource } from '../../types';
@@ -12,6 +12,7 @@ interface DataSourceConfigProps {
 }
 
 const DataSourceConfig: React.FC<DataSourceConfigProps> = ({ agentId }) => {
+  const { message } = App.useApp();
   const [dataSources, setDataSources] = useState<AgentDatasource[]>([]);
   const [loading, setLoading] = useState(true);
   const [addModalVisible, setAddModalVisible] = useState(false);

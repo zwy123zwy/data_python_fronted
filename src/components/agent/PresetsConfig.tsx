@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Input, InputNumber, Switch, message, Popconfirm } from 'antd';
+import { Table, Button, Space, Input, InputNumber, Switch, Popconfirm, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { presetQuestionService } from '../../services/presetQuestion';
 import type { PresetQuestion, PresetQuestionDTO } from '../../types';
@@ -7,6 +7,7 @@ import type { PresetQuestion, PresetQuestionDTO } from '../../types';
 interface Props { agentId: number }
 
 const PresetsConfig: React.FC<Props> = ({ agentId }) => {
+  const { message } = App.useApp();
   const [questions, setQuestions] = useState<PresetQuestionDTO[]>([]);
   const [saving, setSaving] = useState(false);
 

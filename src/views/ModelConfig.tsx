@@ -245,25 +245,6 @@ const ModelConfigView: React.FC = () => {
           />
         )}
       </div>
-      <style>{`
-        .model-config-table .ant-table-body::-webkit-scrollbar,
-        .model-config-table .ant-table-content::-webkit-scrollbar {
-          height: 4px;
-        }
-        .model-config-table .ant-table-body::-webkit-scrollbar-thumb,
-        .model-config-table .ant-table-content::-webkit-scrollbar-thumb {
-          background: #d9d9d9;
-          border-radius: 2px;
-        }
-        .model-config-table .ant-table-body::-webkit-scrollbar-thumb:hover,
-        .model-config-table .ant-table-content::-webkit-scrollbar-thumb:hover {
-          background: #bfbfbf;
-        }
-        .model-config-table .ant-table-body::-webkit-scrollbar-track,
-        .model-config-table .ant-table-content::-webkit-scrollbar-track {
-          background: transparent;
-        }
-      `}</style>
 
       <Modal
         title={editing ? '编辑模型' : '添加模型'}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, Select, Tag, Switch, message, Popconfirm  } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, Select, Tag, Switch, Popconfirm, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { agentKnowledgeService } from '../../services/agentKnowledge';
 import type { AgentKnowledge, KnowledgeType, EmbeddingStatus } from '../../types';
@@ -15,6 +15,7 @@ const TYPE_OPTIONS: { label: string; value: KnowledgeType }[] = [
 const STATUS_COLOR: Record<string, string> = { SUCCESS: 'green', PENDING: 'orange', FAILED: 'red' };
 
 const AgentKnowledgeConfig: React.FC<Props> = ({ agentId }) => {
+  const { message } = App.useApp();
   const [list, setList] = useState<AgentKnowledge[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ pageNum: 1, pageSize: 10, total: 0 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Button, Input, Space, Typography, Popconfirm, message, Tooltip } from 'antd';
+import { Button, Input, Space, Typography, Popconfirm, Tooltip, App } from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined, PushpinOutlined, PushpinFilled, MessageOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { chatService } from '../../services/chat';
 import type { Agent, ChatSession } from '../../types';
@@ -14,6 +14,7 @@ interface Props {
 }
 
 const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelectSession, onRefreshSessions }) => {
+  const { message } = App.useApp();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);

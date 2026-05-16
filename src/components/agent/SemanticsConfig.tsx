@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Upload } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, Popconfirm, Upload, App } from 'antd';
 import { PlusOutlined, UploadOutlined, DownloadOutlined, ImportOutlined } from '@ant-design/icons';
 import { semanticModelService } from '../../services/semanticModel';
 import type { SemanticModel } from '../../types';
@@ -7,6 +7,7 @@ import type { SemanticModel } from '../../types';
 interface Props { agentId: number }
 
 const SemanticsConfig: React.FC<Props> = ({ agentId }) => {
+  const { message } = App.useApp();
   const [list, setList] = useState<SemanticModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');

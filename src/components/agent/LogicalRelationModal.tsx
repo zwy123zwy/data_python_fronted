@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Table, Button, Select, Space, message, Popconfirm } from 'antd';
+import { Modal, Table, Button, Select, Space, Popconfirm, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { logicalRelationService } from '../../services/logicalRelation';
 import type { LogicalRelation } from '../../types';
@@ -11,6 +11,7 @@ interface Props {
 }
 
 const LogicalRelationModal: React.FC<Props> = ({ open, datasourceId, onClose }) => {
+  const { message } = App.useApp();
   const [relations, setRelations] = useState<Partial<LogicalRelation>[]>([]);
   const [loading, setLoading] = useState(false);
 

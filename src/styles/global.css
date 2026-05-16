@@ -172,6 +172,28 @@ body {
   background: var(--text-tertiary);
 }
 
+/* 表格内横向滚动条变体 — 更矮更低调 */
+.model-config-table .ant-table-body::-webkit-scrollbar,
+.model-config-table .ant-table-content::-webkit-scrollbar {
+  height: 4px;
+}
+
+.model-config-table .ant-table-body::-webkit-scrollbar-thumb,
+.model-config-table .ant-table-content::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.model-config-table .ant-table-body::-webkit-scrollbar-thumb:hover,
+.model-config-table .ant-table-content::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+.model-config-table .ant-table-body::-webkit-scrollbar-track,
+.model-config-table .ant-table-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* 全局按钮样式 */
 .btn {
   display: inline-flex;

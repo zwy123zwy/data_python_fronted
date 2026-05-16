@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, Select, InputNumber, Switch, message, Popconfirm } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, Select, InputNumber, Switch, Popconfirm, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import type { PromptConfig } from '../../types';
@@ -7,6 +7,7 @@ import type { PromptConfig } from '../../types';
 interface Props { agentId: number; promptType?: string }
 
 const PromptConfig: React.FC<Props> = ({ promptType = 'report-generator' }) => {
+  const { message } = App.useApp();
   const [list, setList] = useState<PromptConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState(promptType);

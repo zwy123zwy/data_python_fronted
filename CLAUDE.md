@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Frontend Development Rules
+
+Claude Code must follow these rules when changing this frontend project:
+
+- Keep single source files under 500 lines whenever practical. If a file is approaching that size, split logic into smaller components, hooks, services, or utility modules.
+- Do not place large CSS blocks inline in TSX. Prefer `src/styles/global.css`, existing class names, or a dedicated stylesheet/module when styles are component-specific.
+- Inline styles are acceptable only for truly dynamic values that cannot be represented cleanly with classes, such as calculated dimensions, runtime colors, or third-party component escape hatches.
+- Prefer existing project patterns before adding new abstractions. Reuse the service layer in `src/services/`, shared types in `src/types/`, and existing component structure under `src/components/`.
+- Keep components focused on rendering and user interaction. Move API calls, data shaping, and reusable business logic out of large page components when it improves clarity.
+- Avoid adding new dependencies unless the project cannot reasonably solve the problem with the current stack.
+- Keep changes scoped to the requested feature or fix. Do not refactor unrelated files while implementing a small change.
+- Before considering a code change complete, run the relevant checks, usually `npm run type-check` and `npm run build`.
+
 ## Commands
 
 ```bash

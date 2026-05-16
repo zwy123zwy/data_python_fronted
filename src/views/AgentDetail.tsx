@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Tabs, Button, Spin, Space, Tag, Typography, message } from 'antd';
+import { Card, Tabs, Button, Spin, Space, Tag, Typography, App } from 'antd';
 import { ArrowLeftOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { agentService } from '../services/agent';
 import type { Agent } from '../types';
@@ -19,6 +19,7 @@ const STATUS_COLOR: Record<string, string> = { published: 'green', draft: 'orang
 const STATUS_LABEL: Record<string, string> = { published: '已发布', draft: '草稿', offline: '已下线' };
 
 const AgentDetail: React.FC = () => {
+  const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<Agent | null>(null);

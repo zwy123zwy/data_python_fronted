@@ -7,7 +7,7 @@ export interface SessionState {
   closeStream: (() => void) | null;
   lastRequest: {
     agentId: number;
-    threadId: string;
+    threadId?: string;
     query: string;
     humanFeedback: boolean;
     humanFeedbackContent?: string;

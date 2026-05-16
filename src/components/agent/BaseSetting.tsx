@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Select, Button, Space, message, Popconfirm } from 'antd';
+import { Form, Input, Select, Button, Space, Popconfirm, App } from 'antd';
 import { agentService } from '../../services/agent';
 import type { Agent } from '../../types';
 
@@ -11,6 +11,7 @@ interface BaseSettingProps {
 }
 
 const BaseSetting: React.FC<BaseSettingProps> = ({ agent, onUpdate }) => {
+  const { message } = App.useApp();
   const [editing, setEditing] = useState(false);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);

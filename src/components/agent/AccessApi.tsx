@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Card, Button, Space, Typography, Switch, message, Input, Alert, Tabs, Popconfirm } from 'antd';
+import { Card, Button, Space, Typography, Switch, Input, Alert, Tabs, Popconfirm, App } from 'antd';
 import { CopyOutlined, EyeOutlined, EyeInvisibleOutlined, KeyOutlined } from '@ant-design/icons';
 import { agentService } from '../../services/agent';
 
@@ -17,6 +17,7 @@ const maskKey = (key: string): string => {
 };
 
 const AccessApi: React.FC<AccessApiProps> = ({ agentId }) => {
+  const { message } = App.useApp();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyEnabled, setApiKeyEnabled] = useState(false);
   const [loading, setLoading] = useState(true);

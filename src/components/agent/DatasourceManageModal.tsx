@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, InputNumber, Button, message, Space, Table } from 'antd';
+import { Modal, Form, Input, InputNumber, Button, Space, Table, App } from 'antd';
 import { datasourceService } from '../../services/datasource';
 import { agentDatasourceService } from '../../services/agentDatasource';
 import type { Datasource } from '../../types';
@@ -12,6 +12,7 @@ interface Props {
 }
 
 const DatasourceManageModal: React.FC<Props> = ({ open, onClose, agentId, onAdded }) => {
+  const { message } = App.useApp();
   const [datasources, setDatasources] = useState<Datasource[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);

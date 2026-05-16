@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, Switch, Tag, message, Popconfirm } from 'antd';
+import { Table, Button, Space, Modal, Form, Input, Switch, Tag, Popconfirm, App } from 'antd';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { businessKnowledgeService } from '../../services/businessKnowledge';
 import type { BusinessKnowledgeVO } from '../../types';
@@ -7,6 +7,7 @@ import type { BusinessKnowledgeVO } from '../../types';
 interface Props { agentId: number }
 
 const BusinessKnowledgeConfig: React.FC<Props> = ({ agentId }) => {
+  const { message } = App.useApp();
   const [list, setList] = useState<BusinessKnowledgeVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');

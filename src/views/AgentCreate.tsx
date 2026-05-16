@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Form, Input, Select, Button, Upload, message, Typography, Space } from 'antd';
+import { Card, Form, Input, Select, Button, Upload, Typography, Space, App } from 'antd';
 import { UploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { agentService } from '../services/agent';
@@ -10,6 +10,7 @@ const { Title } = Typography;
 const { TextArea } = Input;
 
 const AgentCreate: React.FC = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
