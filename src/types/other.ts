@@ -11,7 +11,7 @@ export interface PresetQuestion {
 export interface PresetQuestionDTO {
   question: string;
   sortOrder?: number;
-  isActive?: boolean;
+  isActive?: number;
 }
 
 export interface LogicalRelation {

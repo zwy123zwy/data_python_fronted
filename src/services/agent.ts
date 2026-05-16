@@ -49,6 +49,6 @@ export const agentService = {
   },
 
   enableApiKey(id: number, enabled: boolean) {
-    return request.post<ApiResponse<null>>(`${BASE}/${id}/api-key/enable`, { enabled });
+    return request.post<ApiResponse<null>>(`${BASE}/${id}/api-key/enable`, null, { params: { enabled } });
   },
 };

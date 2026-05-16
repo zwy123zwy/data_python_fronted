@@ -23,11 +23,11 @@ export const chatService = {
   },
 
   togglePin(sessionId: string, isPinned: boolean) {
-    return request.put<ApiResponse<ChatSession>>(`/api/sessions/${sessionId}/pin`, { isPinned });
+    return request.put<ApiResponse<ChatSession>>(`/api/sessions/${sessionId}/pin`, null, { params: { isPinned } });
   },
 
   renameSession(sessionId: string, title: string) {
-    return request.put<ApiResponse<ChatSession>>(`/api/sessions/${sessionId}/rename`, { title });
+    return request.put<ApiResponse<ChatSession>>(`/api/sessions/${sessionId}/rename`, null, { params: { title } });
   },
 
   deleteSession(sessionId: string) {

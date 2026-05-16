@@ -35,7 +35,7 @@ const AgentRun: React.FC = () => {
         agent={chat.agent}
         currentSessionId={chat.currentSessionId}
         onSelectSession={chat.handleSelectSession}
-        onRefreshSessions={() => chat.setSidebarRefreshKey((k) => k + 1)}
+        refreshKey={chat.sidebarRefreshKey}
       />
 
       {/* Main chat area */}

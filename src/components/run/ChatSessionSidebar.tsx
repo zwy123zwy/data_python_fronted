@@ -10,10 +10,10 @@ interface Props {
   agent: Agent;
   currentSessionId: string;
   onSelectSession: (session: ChatSession) => void;
-  onRefreshSessions: () => void;
+  refreshKey: number;
 }
 
-const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelectSession, onRefreshSessions }) => {
+const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelectSession, refreshKey }) => {
   const { message } = App.useApp();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,8 +22,9 @@ const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelect
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const titleSSERef = useRef<EventSource | null>(null);
+  const initialLoadDone = useRef(false);
 
-  const fetchSessions = async () => {
+  const fetchSessions = async (): Promise<ChatSession[]> => {
     setLoading(true);
     try {
       const res = await chatService.getSessions(agent.id);
@@ -33,11 +34,47 @@ const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelect
         return new Date(b.updateTime).getTime() - new Date(a.updateTime).getTime();
       });
       setSessions(list);
-    } catch { /* empty */ }
+      return list;
+    } catch { return []; }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchSessions(); onRefreshSessions(); }, [agent.id]);
+  // Initial load: auto-select first session or auto-create (matching Vue onMounted behavior)
+  useEffect(() => {
+    initialLoadDone.current = false;
+  }, [agent.id]);
+
+  useEffect(() => {
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+
+    const init = async () => {
+      const list = await fetchSessions();
+      if (list.length > 0) {
+        onSelectSession(list[0]);
+      } else {
+        setCreating(true);
+        try {
+          const createRes = await chatService.createSession(agent.id, {
+            title: '新会话',
+            userId: 1,
+          });
+          const session = createRes.data.data as ChatSession;
+          if (session) {
+            setSessions([session]);
+            onSelectSession(session);
+          }
+        } catch { /* ignore */ }
+        finally { setCreating(false); }
+      }
+    };
+    init();
+  }, [agent.id]);
+
+  // Re-fetch on refreshKey changes (skip initial since handled above)
+  useEffect(() => {
+    if (refreshKey > 0) fetchSessions();
+  }, [refreshKey]);
 
   // SSE for session title updates
   useEffect(() => {
@@ -45,6 +82,7 @@ const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelect
     let reconnectTimer: number;
 
     const connect = () => {
+      // todo：这里使用的原生EventSource，后续可以改成封装的SSE工具类？
       const es = new EventSource(url);
       titleSSERef.current = es;
 
@@ -97,6 +135,7 @@ const ChatSessionSidebar: React.FC<Props> = ({ agent, currentSessionId, onSelect
     try {
       await chatService.clearSessions(agent.id);
       message.success('全部会话已清空');
+      onSelectSession({ id: '', agentId: agent.id, title: '', isPinned: false, userId: 0, createTime: '', updateTime: '' } as ChatSession);
       fetchSessions();
     } catch {
       message.error('清空会话失败');

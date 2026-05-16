@@ -147,11 +147,7 @@ export function useAgentChat(agentId: number) {
       pageSize,
       onScrollToBottom: scrollToBottom,
       onMessagesReloaded: (msgs) => {
-        if (msgs.length === 1) {
-          setMessages((prev) => [...prev, msgs[0]]);
-        } else {
-          setMessages(msgs);
-        }
+        setMessages(msgs);
       },
       getSessionTitle: () => {
         return currentSessionId ? (sessionsRef.current.find((s) => s.id === currentSessionId)?.title || '') : '';
@@ -281,25 +277,24 @@ export function useAgentChat(agentId: number) {
       return;
     }
 
-    if (!sid) {
-      try {
-        const res = await chatService.createSession(agentId, { title: '新会话', userId: 1 });
-        const session = res.data.data as ChatSession;
-        if (session) {
-          setCurrentSessionId(session.id);
-          currentSessionIdRef.current = session.id;
-          message.success('新会话创建成功');
-          handleSend(question);
-          return;
-        }
-      } catch {
+    try {
+      const res = await chatService.createSession(agentId, { title: question.slice(0, 30), userId: 1 });
+      const session = res.data.data as ChatSession;
+      if (session) {
+        // Clear old session's messages and switch to new session
+        setMessages([]);
+        setCurrentSessionId(session.id);
+        currentSessionIdRef.current = session.id;
+        // Refresh sidebar to show new session
+        setSidebarRefreshKey((k) => k + 1);
+        handleSend(question);
+      } else {
         message.error('创建会话失败');
-        return;
       }
+    } catch {
+      message.error('创建会话失败');
     }
-
-    handleSend(question);
-  }, [agentId, getState, handleSend, message]);
+  }, [agentId, getState, handleSend, message, setSidebarRefreshKey]);
 
   // ---- NL2SQL / human feedback mutual exclusion ----
   const handleNl2sqlChange = useCallback((checked: boolean) => {

@@ -137,24 +137,18 @@ export function sendGraphRequest(
       if (st.htmlReportContent) {
         await chatService.saveMessage(sid, {
           sessionId: sid, role: 'assistant', content: st.htmlReportContent, messageType: 'html-report',
-        }).then((res) => {
-          const saved = res.data.data as ChatMessage;
-          if (saved) onMessagesReloaded([saved]);
         }).catch(() => {});
         setState(sid, { isStreaming: false, nodeBlocks: [] });
       } else if (st.markdownReportContent) {
         await chatService.saveMessage(sid, {
           sessionId: sid, role: 'assistant', content: st.markdownReportContent, messageType: 'markdown-report',
-        }).then((res) => {
-          const saved = res.data.data as ChatMessage;
-          if (saved) onMessagesReloaded([saved]);
         }).catch(() => {});
         setState(sid, { isStreaming: false, nodeBlocks: [] });
       } else {
         if (currentBlockIndex >= 0 && st.nodeBlocks[currentBlockIndex]) {
           await saveNodeBlock(st.nodeBlocks[currentBlockIndex]);
         }
-        setState(sid, { isStreaming: false });
+        setState(sid, { isStreaming: false, nodeBlocks: [] });
       }
 
       message.success(`会话[${getSessionTitle()}]处理完成`);

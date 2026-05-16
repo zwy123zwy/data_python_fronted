@@ -14,6 +14,7 @@ Claude Code must follow these rules when changing this frontend project:
 - Avoid adding new dependencies unless the project cannot reasonably solve the problem with the current stack.
 - Keep changes scoped to the requested feature or fix. Do not refactor unrelated files while implementing a small change.
 - Before considering a code change complete, run the relevant checks, usually `npm run type-check` and `npm run build`.
+- 修改完成后准备提交，每完成一个独立的功能或修复就创建一个 commit。累计 10 次 commit 后统一推送到远程仓库。
 
 ## Commands
 

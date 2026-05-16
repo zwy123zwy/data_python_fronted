@@ -9,7 +9,7 @@ export const presetQuestionService = {
   },
 
   batchSave(agentId: number, questions: PresetQuestionDTO[]) {
-    return request.post<ApiResponse<PresetQuestion[]>>(BASE(agentId), questions);
+    return request.post<ApiResponse<PresetQuestion[]>>(BASE(agentId), { questions });
   },
 
   delete(agentId: number, questionId: number) {

@@ -202,13 +202,13 @@ const ChatMessages: React.FC<Props> = ({
                       const q = msg.content;
                       try {
                         const existing = await presetQuestionService.list(agentId);
-                        const list = (existing.data?.data || []) as PresetQuestion[];
+                        const list: { question: string; sortOrder: number; isActive: number }[] = (existing.data?.data || []).map((x: PresetQuestion) => ({ question: x.question, sortOrder: x.sortOrder, isActive: x.isActive ? 1 : 0 }));
                         if (list.some((x) => x.question === q)) {
                           message.warning('该问题已是预设问题');
                           return;
                         }
-                        list.push({ question: q, sortOrder: list.length, isActive: true } as PresetQuestion);
-                        await presetQuestionService.batchSave(agentId, list as any);
+                        list.push({ question: q, sortOrder: list.length, isActive: 1 });
+                        await presetQuestionService.batchSave(agentId, list);
                         message.success('已设为预设问题');
                       } catch {
                         message.error('设置失败');
