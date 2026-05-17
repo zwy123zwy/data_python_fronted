@@ -1,6 +1,5 @@
 import { streamSearch } from '../services/graph';
 import { chatService } from '../services/chat';
-import { generateNodeHtml } from './nodeFormat';
 import type { GraphNodeResponse, GraphRequest, ChatMessage } from '../types';
 import type { SessionState } from '../stores/sessionStateStore';
 
@@ -15,6 +14,15 @@ interface StreamDeps {
   getSessionTitle: () => string;
 }
 
+/**
+ * sendGraphRequest — 发起 SSE 流式请求，将后端图节点输出分组写入 Zustand store
+ *
+ * 核心设计：
+ * - 中间节点块仅在内存中累积为思维链展示，不持久化到后端
+ * - onComplete：清除 nodeBlocks，思维链消失；只保存最终报告，重新加载消息呈现干净结果
+ * - onError / onStop：保留 nodeBlocks，思维链以"思考完成"状态展示部分进展
+ * - 下次发送时 doStreamRequest 清空 nodeBlocks，开始新一轮思维链
+ */
 export function sendGraphRequest(
   request: GraphRequest,
   sid: string,
@@ -22,22 +30,18 @@ export function sendGraphRequest(
 ): () => void {
   const { getState, setState, message, showSqlResults, pageSize, onScrollToBottom, onMessagesReloaded, getSessionTitle } = deps;
 
-  const pendingSaves: Promise<void>[] = [];
   let currentNodeName: string | null = null;
   let currentBlockIndex = -1;
 
-  const saveNodeBlock = (nodes: GraphNodeResponse[]): Promise<void> => {
-    if (!nodes || !nodes.length) return Promise.resolve();
-    const html = generateNodeHtml(nodes, showSqlResults, pageSize);
-    return chatService.saveMessage(sid, {
-      sessionId: sid,
-      role: 'assistant',
-      content: html,
-      messageType: 'html',
-    }).then(() => {}).catch((err) => {
-      console.error('保存AI消息失败:', err);
-    });
-  };
+  // 人机回路恢复时，从已有 nodeBlocks 末尾接续，避免重复建块
+  const initialSt = getState(sid);
+  if (initialSt.nodeBlocks.length > 0) {
+    const lastBlock = initialSt.nodeBlocks[initialSt.nodeBlocks.length - 1];
+    if (lastBlock && lastBlock.length > 0) {
+      currentNodeName = lastBlock[0].nodeName;
+      currentBlockIndex = initialSt.nodeBlocks.length - 1;
+    }
+  }
 
   return streamSearch(request, {
     onMessage: async (data: GraphNodeResponse) => {
@@ -51,12 +55,10 @@ export function sendGraphRequest(
         st.lastRequest.threadId = data.threadId;
       }
 
+      // ---- ReportGeneratorNode：流式累积报告内容 ----
       if (data.nodeName === 'ReportGeneratorNode') {
         const isNewNode = currentNodeName === null || data.nodeName !== currentNodeName;
         if (isNewNode) {
-          if (currentBlockIndex >= 0 && st.nodeBlocks[currentBlockIndex]) {
-            pendingSaves.push(saveNodeBlock(st.nodeBlocks[currentBlockIndex]));
-          }
           st.nodeBlocks.push([{ ...data }]);
           currentBlockIndex = st.nodeBlocks.length - 1;
           currentNodeName = data.nodeName;
@@ -87,20 +89,20 @@ export function sendGraphRequest(
         }
 
         setState(sid, { nodeBlocks: [...st.nodeBlocks], htmlReportContent: st.htmlReportContent, htmlReportSize: st.htmlReportSize, markdownReportContent: st.markdownReportContent });
-      } else if (data.textType === 'RESULT_SET') {
-        if (currentBlockIndex >= 0 && st.nodeBlocks[currentBlockIndex]) {
-          pendingSaves.push(saveNodeBlock(st.nodeBlocks[currentBlockIndex]));
-        }
+      }
+
+      // ---- RESULT_SET：新建独立块 ----
+      else if (data.textType === 'RESULT_SET') {
         st.nodeBlocks.push([{ ...data }]);
         currentBlockIndex = st.nodeBlocks.length - 1;
         currentNodeName = 'result_set';
         setState(sid, { nodeBlocks: [...st.nodeBlocks] });
-      } else {
+      }
+
+      // ---- 其他节点：按 nodeName 分组 ----
+      else {
         const isNewNode = currentNodeName === null || data.nodeName !== currentNodeName;
         if (isNewNode) {
-          if (currentBlockIndex >= 0 && st.nodeBlocks[currentBlockIndex]) {
-            pendingSaves.push(saveNodeBlock(st.nodeBlocks[currentBlockIndex]));
-          }
           st.nodeBlocks.push([{ ...data }]);
           currentBlockIndex = st.nodeBlocks.length - 1;
           currentNodeName = data.nodeName;
@@ -121,35 +123,26 @@ export function sendGraphRequest(
 
     onError: async (error: string) => {
       message.error(`流式请求失败: ${error}`);
-      if (pendingSaves.length > 0) await Promise.all(pendingSaves);
+      // 保留 nodeBlocks，让用户看到已完成的步骤
       setState(sid, { isStreaming: false, closeStream: null });
-      try {
-        const res = await chatService.getSessionMessages(sid);
-        onMessagesReloaded((res.data.data || []) as ChatMessage[]);
-      } catch { /* ignore */ }
     },
 
     onComplete: async () => {
-      if (pendingSaves.length > 0) await Promise.all(pendingSaves);
-
       const st = getState(sid);
 
+      // 只保存最终报告到后端，中间节点不持久化
       if (st.htmlReportContent) {
         await chatService.saveMessage(sid, {
           sessionId: sid, role: 'assistant', content: st.htmlReportContent, messageType: 'html-report',
         }).catch(() => {});
-        setState(sid, { isStreaming: false, nodeBlocks: [] });
       } else if (st.markdownReportContent) {
         await chatService.saveMessage(sid, {
           sessionId: sid, role: 'assistant', content: st.markdownReportContent, messageType: 'markdown-report',
         }).catch(() => {});
-        setState(sid, { isStreaming: false, nodeBlocks: [] });
-      } else {
-        if (currentBlockIndex >= 0 && st.nodeBlocks[currentBlockIndex]) {
-          await saveNodeBlock(st.nodeBlocks[currentBlockIndex]);
-        }
-        setState(sid, { isStreaming: false, nodeBlocks: [] });
       }
+
+      // 流完成后清除 nodeBlocks，思维链消失；重新加载的消息（用户消息 + 最终报告）接管展示
+      setState(sid, { isStreaming: false, closeStream: null, nodeBlocks: [] });
 
       message.success(`会话[${getSessionTitle()}]处理完成`);
 
@@ -164,15 +157,12 @@ export function sendGraphRequest(
       if (st.lastRequest) {
         st.lastRequest.threadId = threadId || st.lastRequest.threadId;
       }
-      if (currentBlockIndex >= 0 && st.nodeBlocks[currentBlockIndex]) {
-        await saveNodeBlock(st.nodeBlocks[currentBlockIndex]);
-      }
-      if (pendingSaves.length > 0) await Promise.all(pendingSaves);
+      // 保留 nodeBlocks 供 HumanFeedback 面板展示计划步骤
       setState(sid, {
         isStreaming: false,
-        nodeBlocks: [],
         showHumanFeedback: true,
         lastRequest: st.lastRequest,
+        currentThreadId: threadId || st.lastRequest?.threadId || '',
       });
     },
   });

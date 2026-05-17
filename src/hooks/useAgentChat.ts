@@ -3,7 +3,6 @@ import { App } from 'antd';
 import { agentService } from '../services/agent';
 import { chatService } from '../services/chat';
 import { useSessionStateStore } from '../stores/sessionStateStore';
-import { generateNodeHtml } from '../utils/nodeFormat';
 import { sendGraphRequest } from '../utils/streamRequest';
 import type { Agent, ChatSession, ChatMessage, GraphNodeResponse, GraphRequest } from '../types';
 
@@ -43,20 +42,24 @@ export function useAgentChat(agentId: number) {
 
   installGlobalHelpers();
 
-  // Agent
+  // ==============================
+  // 本地 UI 状态
+  // ==============================
+
+  // Agent 信息
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Session & messages
+  // 当前会话 & 消息列表
   const [currentSessionId, setCurrentSessionId] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const sessionsRef = useRef<ChatSession[]>([]);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
-  // Input
+  // 输入框
   const [inputQuery, setInputQuery] = useState('');
 
-  // Options
+  // 开关 / 选项
   const [humanFeedback, setHumanFeedback] = useState(false);
   const [nl2sqlOnly, setNl2sqlOnly] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -65,12 +68,14 @@ export function useAgentChat(agentId: number) {
   const [reportFormat, setReportFormat] = useState<'markdown' | 'html'>('markdown');
   const [inputControlsCollapsed, setInputControlsCollapsed] = useState(false);
 
-  // Report
+  // 全屏报告
   const [showFullscreenReport, setShowFullscreenReport] = useState(false);
   const [fullscreenReportContent, setFullscreenReportContent] = useState('');
   const [reportDownloading, setReportDownloading] = useState(false);
 
-  // Refs
+  // ==============================
+  // Ref：让回调始终读到最新值，避免闭包陷阱
+  // ==============================
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const currentSessionIdRef = useRef(currentSessionId);
   currentSessionIdRef.current = currentSessionId;
@@ -83,11 +88,13 @@ export function useAgentChat(agentId: number) {
   const inputQueryRef = useRef(inputQuery);
   inputQueryRef.current = inputQuery;
 
-  // Zustand store
+  // ==============================
+  // Zustand：跨组件共享的会话运行时状态（流式块、暂停、报告等）
+  // ==============================
   const { getState, setState } = useSessionStateStore();
   const sessionState = currentSessionId ? getState(currentSessionId) : null;
 
-  // ---- load agent ----
+  // ---- 加载智能体信息 ----
   useEffect(() => {
     agentService.get(agentId)
       .then((res) => setAgent(res.data.data || null))
@@ -95,7 +102,7 @@ export function useAgentChat(agentId: number) {
       .finally(() => setLoading(false));
   }, [agentId]);
 
-  // ---- auto-scroll ----
+  // ---- 自动滚动到底部 ----
   const scrollToBottom = useCallback(() => {
     if (!autoScroll) return;
     requestAnimationFrame(() => {
@@ -105,11 +112,12 @@ export function useAgentChat(agentId: number) {
     });
   }, [autoScroll]);
 
+  // 消息列表或流式块变化时触发滚动
   useEffect(() => {
     scrollToBottom();
   }, [messages, sessionState?.nodeBlocks, scrollToBottom]);
 
-  // ---- save message helper ----
+  // ---- 持久化单条消息到后端 ----
   const saveMessage = useCallback(async (
     sessionId: string,
     role: 'user' | 'assistant',
@@ -122,21 +130,34 @@ export function useAgentChat(agentId: number) {
       const res = await chatService.saveMessage(sessionId, {
         sessionId, role, content, messageType: messageType as any, titleNeeded, metadata,
       });
+      // TODO: 这里的类型强转，不太好吧
+      
       return res.data.data as ChatMessage;
     } catch {
       return null;
     }
   }, []);
 
-  // ---- stream request builder ----
-  const doStreamRequest = useCallback((request: GraphRequest) => {
+  // ---- 构建 SSE 流式请求，交由 streamRequest 执行 ----
+  const doStreamRequest = useCallback((request: GraphRequest, preserveNodeBlocks = false) => {
     const sid = currentSessionIdRef.current;
     if (!sid) return;
 
+    // 保留上次的 rejectCount，避免人机回路中拒绝累计次数被重置
+    const prev = getState(sid);
+
     setState(sid, {
-      isStreaming: true, nodeBlocks: [], lastRequest: request,
-      htmlReportContent: '', htmlReportSize: 0, markdownReportContent: '',
-      closeStream: null, showHumanFeedback: false, rejectCount: 0, currentThreadId: '',
+      isStreaming: true,
+      // 人机回路恢复时保留旧 nodeBlocks，思维链不中断
+      nodeBlocks: preserveNodeBlocks ? (prev?.nodeBlocks || []) : [],
+      lastRequest: request,
+      htmlReportContent: '',
+      htmlReportSize: 0,
+      markdownReportContent: '',
+      closeStream: null,
+      showHumanFeedback: false,
+      rejectCount: prev?.rejectCount || 0,
+      currentThreadId: request.threadId || prev?.currentThreadId || '',
     });
 
     const closeFn = sendGraphRequest(request, sid, {
@@ -157,12 +178,13 @@ export function useAgentChat(agentId: number) {
     setState(sid, { closeStream: closeFn });
   }, [getState, setState, message, showSqlResults, pageSize, scrollToBottom]);
 
-  // ---- send message ----
+  // ---- 发送消息入口：无会话则自动创建，已有流则阻止，否则保存+发起 SSE ----
   const handleSend = useCallback(async (queryText?: string) => {
     let sid = currentSessionIdRef.current;
     const query = (queryText || inputQueryRef.current).trim();
     if (!query || !agentId) return;
 
+    // 无会话时自动创建
     if (!sid) {
       try {
         const res = await chatService.createSession(agentId, { title: '新会话', userId: 1 });
@@ -182,6 +204,7 @@ export function useAgentChat(agentId: number) {
       }
     }
 
+    // 防止重复发送（流式进行中）
     const st = getState(sid);
     if (st?.isStreaming) {
       message.warning('智能体正在处理中，请稍后...');
@@ -190,9 +213,12 @@ export function useAgentChat(agentId: number) {
 
     setInputQuery('');
 
+    // 首条消息触发标题生成
     const needsTitle = messagesRef.current.length === 0;
 
+    // 1. 持久化用户消息到后端
     const savedUser = await saveMessage(sid, 'user', query, 'text', needsTitle);
+    // 2. 立即添加到本地 state 展示用户气泡
     setMessages((prev) => [...prev, {
       id: savedUser?.id || String(Date.now()),
       sessionId: sid,
@@ -202,6 +228,7 @@ export function useAgentChat(agentId: number) {
       createTime: new Date().toISOString(),
     }]);
 
+    // 3. 发起 SSE 流式请求
     doStreamRequest({
       agentId,
       query,
@@ -211,7 +238,7 @@ export function useAgentChat(agentId: number) {
     });
   }, [agentId, getState, doStreamRequest, saveMessage, message]);
 
-  // ---- stop streaming ----
+  // ---- 停止 SSE 流：关闭连接，保留 nodeBlocks 展示已完成的思考链 ----
   const handleStop = useCallback(async () => {
     if (!currentSessionId) return;
 
@@ -221,42 +248,31 @@ export function useAgentChat(agentId: number) {
       return;
     }
 
+    // 调用 AbortController 关闭 SSE 连接
     st.closeStream();
-    setState(currentSessionId, { closeStream: null });
 
-    if (st.nodeBlocks && st.nodeBlocks.length > 0) {
-      await Promise.all(st.nodeBlocks.map((block) => {
-        if (!block || !block.length) return Promise.resolve();
-        const html = generateNodeHtml(block, showSqlResults, pageSize);
-        return chatService.saveMessage(currentSessionId, {
-          sessionId: currentSessionId, role: 'assistant', content: html, messageType: 'html',
-        }).catch((err) => console.error('保存AI消息失败:', err));
-      }));
-    }
-
+    // 保留 nodeBlocks（不清空），前端继续展示"思考完成"的思维链
     setState(currentSessionId, {
-      isStreaming: false, nodeBlocks: [],
-      htmlReportContent: '', htmlReportSize: 0, markdownReportContent: '',
+      isStreaming: false,
+      closeStream: null,
     });
 
     message.success('已停止对话');
+  }, [currentSessionId, getState, setState, message]);
 
-    try {
-      const res = await chatService.getSessionMessages(currentSessionId);
-      setMessages((res.data.data || []) as ChatMessage[]);
-    } catch { /* ignore */ }
-  }, [currentSessionId, getState, setState, showSqlResults, pageSize, message]);
-
-  // ---- human feedback ----
+  // ---- 人机回路：批准/拒绝计划，携带 threadId 恢复 SSE 流 ----
   const handleFeedback = useCallback(async (approved: boolean, feedbackContent: string) => {
     const st = currentSessionId ? getState(currentSessionId) : null;
     if (!st || !currentSessionId) return;
 
-    setState(currentSessionId, { showHumanFeedback: false });
+    // 合并 setState 调用：隐藏反馈面板 + 累加拒绝次数
     setState(currentSessionId, {
+      showHumanFeedback: false,
       rejectCount: approved ? st.rejectCount : st.rejectCount + 1,
     });
 
+    // 用 currentThreadId 或 lastRequest.threadId 恢复被中断的图执行
+    // preserveNodeBlocks=true → 保留暂停前的思维链，新节点追加到已有时间线
     doStreamRequest({
       agentId,
       threadId: st.currentThreadId || st.lastRequest?.threadId,
@@ -265,10 +281,10 @@ export function useAgentChat(agentId: number) {
       humanFeedbackContent: feedbackContent.trim() || 'Accept',
       rejectedPlan: !approved,
       nl2sqlOnly: st.lastRequest?.nl2sqlOnly || false,
-    });
+    }, true);
   }, [agentId, currentSessionId, getState, setState, doStreamRequest]);
 
-  // ---- preset question click ----
+  // ---- 点击预设问题 → 创建新会话并发送 ----
   const handlePresetQuestionClick = useCallback(async (question: string) => {
     const sid = currentSessionIdRef.current;
     const st = sid ? getState(sid) : null;
@@ -281,11 +297,11 @@ export function useAgentChat(agentId: number) {
       const res = await chatService.createSession(agentId, { title: question.slice(0, 30), userId: 1 });
       const session = res.data.data as ChatSession;
       if (session) {
-        // Clear old session's messages and switch to new session
+        // 清空旧会话消息，切换到新会话
         setMessages([]);
         setCurrentSessionId(session.id);
         currentSessionIdRef.current = session.id;
-        // Refresh sidebar to show new session
+        // 刷新侧边栏显示新会话
         setSidebarRefreshKey((k) => k + 1);
         handleSend(question);
       } else {
@@ -296,13 +312,13 @@ export function useAgentChat(agentId: number) {
     }
   }, [agentId, getState, handleSend, message, setSidebarRefreshKey]);
 
-  // ---- NL2SQL / human feedback mutual exclusion ----
+  // ---- NL2SQL 与人工反馈互斥 ----
   const handleNl2sqlChange = useCallback((checked: boolean) => {
     setNl2sqlOnly(checked);
     if (checked) setHumanFeedback(false);
   }, []);
 
-  // ---- report download ----
+  // ---- 报告下载（Markdown / HTML） ----
   const handleDownloadMarkdown = useCallback((content: string) => {
     if (!content) { message.warning('没有可下载的Markdown报告'); return; }
     const blob = new Blob([content], { type: 'text/markdown' });
@@ -340,20 +356,22 @@ export function useAgentChat(agentId: number) {
     } finally { setReportDownloading(false); }
   }, [currentSessionId, getState, message]);
 
-  // ---- fullscreen ----
+  // ---- 打开全屏报告弹窗 ----
   const openFullscreen = useCallback((content: string) => {
     setFullscreenReportContent(content);
     setShowFullscreenReport(true);
   }, []);
 
-  // ---- get markdown content from streaming block ----
+  // ---- 从流式 block 中提取 Markdown 报告内容 ----
   const getMarkdownFromBlock = useCallback((nodes: GraphNodeResponse[]): string => {
     if (!nodes || !nodes.length) return '';
     const first = nodes[0];
+    // ReportGeneratorNode 的 MARK_DOWN 从 store 中实时读取
     if (first.nodeName === 'ReportGeneratorNode' && first.textType === 'MARK_DOWN') {
       const st = currentSessionId ? getState(currentSessionId) : null;
       return st?.markdownReportContent || '';
     }
+    // 其他节点连续 MARK_DOWN 文本的拼接
     let md = '';
     for (let i = 0; i < nodes.length; i++) {
       if (nodes[i].textType === 'MARK_DOWN') {
@@ -369,12 +387,14 @@ export function useAgentChat(agentId: number) {
     return md;
   }, [currentSessionId, getState]);
 
-  // ---- session selection ----
+  // ---- 切换会话：保存当前会话状态，加载目标会话消息 ----
   const handleSelectSession = useCallback(async (session: ChatSession | null) => {
+    // 离开当前会话前保存运行时状态
     if (currentSessionId) {
       const cur = getState(currentSessionId);
       if (cur) setState(currentSessionId, { ...cur });
     }
+    // 空会话（id 为空）→ 清空展示
     if (!session || !session.id) {
       setCurrentSessionId('');
       setMessages([]);

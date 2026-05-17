@@ -3,13 +3,12 @@ import { Button, Avatar, Typography, Radio, Tooltip, App } from 'antd';
 import {
   DownloadOutlined,
   FullscreenOutlined,
-  LoadingOutlined,
 } from '@ant-design/icons';
 import DOMPurify from 'dompurify';
 import MarkdownIt from 'markdown-it';
 import { presetQuestionService } from '../../services/presetQuestion';
-import { generateNodeHtml } from '../../utils/nodeFormat';
 import PresetQuestions from './PresetQuestions';
+import ChainOfThought from './ChainOfThought';
 import ResultSetDisplay from './ResultSetDisplay';
 import ReportHtmlView from './ReportHtmlView';
 import type { ChatMessage, GraphNodeResponse, ResultData, PresetQuestion } from '../../types';
@@ -228,85 +227,17 @@ const ChatMessages: React.FC<Props> = ({
             );
           })}
 
-          {/* Streaming response */}
-          {isStreaming && nodeBlocks.length > 0 && (
-            <div className="streaming-response" style={{
-              background: '#fff', border: '1px solid #e8e8e8', borderRadius: 8, padding: 16,
-            }}>
-              <div className="streaming-header" style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #f0f0f0',
-              }}>
-                <LoadingOutlined spin style={{ color: '#409eff' }} />
-                <span style={{ fontWeight: 500, color: '#409eff' }}>智能体正在处理中...</span>
-              </div>
-              <div className="agent-response-container" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {nodeBlocks.map((block, i) => {
-                  if (!block || !block.length) return null;
-                  const first = block[0];
-
-                  // ReportGeneratorNode with MARK_DOWN
-                  if (first.nodeName === 'ReportGeneratorNode' && first.textType === 'MARK_DOWN') {
-                    return (
-                      <div key={i} className="agent-response-block" style={{
-                        background: '#f8f9fa', border: '1px solid #e8e8e8', borderRadius: 8, overflow: 'hidden',
-                      }}>
-                        <div className="agent-response-title" style={{
-                          background: '#ecf5ff', padding: '12px 16px', fontWeight: 600,
-                          color: '#409eff', borderBottom: '1px solid #e8e8e8', fontSize: 14,
-                        }}>
-                          {first.nodeName}
-                        </div>
-                        <div className="agent-response-content" style={{ padding: 16, lineHeight: 1.6, minHeight: 40 }}>
-                          {reportFormat === 'markdown' ? (
-                            <div className="html-rendered-content"
-                              dangerouslySetInnerHTML={{
-                                __html: mdRef.current.render(onGetMarkdownFromBlock(block)),
-                              }}
-                            />
-                          ) : (
-                            <ReportHtmlView content={onGetMarkdownFromBlock(block)} />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // RESULT_SET
-                  if (first.textType === 'RESULT_SET') {
-                    return (
-                      <div key={i} className="agent-response-block" style={{
-                        background: '#f8f9fa', border: '1px solid #e8e8e8', borderRadius: 8, overflow: 'hidden',
-                      }}>
-                        <div className="agent-response-title" style={{
-                          background: '#ecf5ff', padding: '12px 16px', fontWeight: 600,
-                          color: '#409eff', borderBottom: '1px solid #e8e8e8', fontSize: 14,
-                        }}>
-                          {first.nodeName}
-                        </div>
-                        <div className="agent-response-content" style={{ padding: 16, lineHeight: 1.6, minHeight: 40 }}>
-                          {(() => {
-                            try {
-                              const rd = JSON.parse(first.text) as ResultData;
-                              return <ResultSetDisplay resultData={rd} pageSize={pageSize} />;
-                            } catch { return null; }
-                          })()}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Other nodes — use generated HTML
-                  return (
-                    <div key={i}
-                      dangerouslySetInnerHTML={{
-                        __html: generateNodeHtml(block, showSqlResults, pageSize),
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+          {/* 思维链：流式节点执行过程（流式进行中 + 流式结束后保留展示） */}
+          {nodeBlocks.length > 0 && (
+            <ChainOfThought
+              nodeBlocks={nodeBlocks}
+              isStreaming={isStreaming}
+              showSqlResults={showSqlResults}
+              pageSize={pageSize}
+              reportFormat={reportFormat}
+              mdRef={mdRef}
+              onGetMarkdownFromBlock={onGetMarkdownFromBlock}
+            />
           )}
         </div>
       )}
