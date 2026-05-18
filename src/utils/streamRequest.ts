@@ -267,9 +267,9 @@ export function sendGraphRequest(
       // 保留 nodeBlocks，让用户看到已完成的步骤
       setState(sid, { isStreaming: false, closeStream: null });
 
-      // ★ 标记当前 running tool/round 为 error，清除思考气泡
+      // ★ SSE 错误：最后一个 running tool/round → error (红), 区别于用户手动停止的 skipped (灰)
       const execStore = useExecutionStore.getState();
-      execStore.stop(); // 所有 running → skipped (stop 统一处理异常终止)
+      execStore.markError();  // 仅标记最后 running 的 tool/round, 已完成的保持原状
       execStore.clearThinking();
     },
 

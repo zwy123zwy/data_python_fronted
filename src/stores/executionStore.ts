@@ -60,8 +60,10 @@ interface ExecutionState {
   lastAgentName: AgentName | null;
 
   // --- 生命周期 ---
-  /** 所有 running 状态 → skipped，清空思考气泡 */
+  /** 所有 running 状态 → skipped，清空思考气泡 (用户主动停止) */
   stop: () => void;
+  /** SSE 错误：最后一个 running round/tool → error (与 stop 的 skipped 区分) */
+  markError: () => void;
   /** 清空全部状态，恢复初始值 */
   reset: () => void;
 }
@@ -103,6 +105,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   },
 
   addToolCall(agentName: AgentName, tool: ToolCall) {
+    // 确保每个 tool 有唯一 id (调用方可传空字符串, store 兜底生成)
+    const toolWithId: ToolCall = { ...tool, id: tool.id || uid() };
     set((s) => ({
       rounds: s.rounds.map((r) => {
         if (r.agentName !== agentName) return r;
@@ -114,7 +118,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
             : t,
         );
 
-        return { ...r, tools: [...updatedTools, tool] };
+        return { ...r, tools: [...updatedTools, toolWithId] };
       }),
       lastAgentName: agentName,
     }));
@@ -150,6 +154,35 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       thinkingText: '',
       thinkingHint: '',
     }));
+  },
+
+  /** SSE 错误：仅标记最后一个 running round/tool 为 error (区别于 stop 的 skipped) */
+  markError() {
+    set((s) => {
+      const rounds = [...s.rounds];
+      // 从后往前找最后一个 running round
+      for (let i = rounds.length - 1; i >= 0; i--) {
+        const r = rounds[i];
+        if (r.status === 'running') {
+          const tools = r.tools.map((t, ti) => {
+            // 只标记最后一个 running tool 为 error
+            const isLastRunning = t.status === 'running'
+              && !r.tools.slice(ti + 1).some((tt) => tt.status === 'running');
+            if (isLastRunning) {
+              return { ...t, status: 'error' as ToolStatus, finishedAt: Date.now() };
+            }
+            return t;
+          });
+          rounds[i] = {
+            ...r,
+            status: 'error' as RoundStatus,
+            tools,
+          };
+          break; // 只处理最后一个 running round
+        }
+      }
+      return { rounds, thinkingText: '', thinkingHint: '' };
+    });
   },
 
   reset() {
