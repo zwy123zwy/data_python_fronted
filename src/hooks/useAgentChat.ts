@@ -4,6 +4,7 @@ import { agentService } from '../services/agent';
 import { chatService } from '../services/chat';
 import { useSessionStateStore } from '../stores/sessionStateStore';
 import { sendGraphRequest } from '../utils/streamRequest';
+import { useExecutionStore } from '../stores/executionStore';
 import type { Agent, ChatSession, ChatMessage, GraphNodeResponse, GraphRequest } from '../types';
 
 // ---- global helpers (install once) ----
@@ -228,6 +229,9 @@ export function useAgentChat(agentId: number) {
       createTime: new Date().toISOString(),
     }]);
 
+    // ★ 新请求开始前重置执行面板状态 (清空上一轮的 Round/Tool/思考气泡)
+    useExecutionStore.getState().reset();
+
     // 3. 发起 SSE 流式请求
     doStreamRequest({
       agentId,
@@ -247,6 +251,9 @@ export function useAgentChat(agentId: number) {
       message.warning('没有正在进行的对话');
       return;
     }
+
+    // ★ 标记执行面板所有 running → skipped
+    useExecutionStore.getState().stop();
 
     // 调用 AbortController 关闭 SSE 连接
     st.closeStream();

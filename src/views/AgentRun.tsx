@@ -6,12 +6,16 @@ import {
   StopOutlined,
   ArrowDownOutlined,
   CloseOutlined,
+  ControlOutlined,
 } from '@ant-design/icons';
 import { createMarkdownIt } from '../components/run/markdown';
 import ChatSessionSidebar from '../components/run/ChatSessionSidebar';
 import ChatMessages from '../components/run/ChatMessages';
 import HumanFeedback from '../components/run/HumanFeedback';
 import ReportHtmlView from '../components/run/ReportHtmlView';
+import ExecutionDrawer from '../components/run/ExecutionDrawer';
+import ThinkingBubble from '../components/run/ThinkingBubble';
+import { useExecutionStore } from '../stores/executionStore';
 import { useAgentChat } from '../hooks/useAgentChat';
 
 const { TextArea } = Input;
@@ -28,6 +32,8 @@ const AgentRun: React.FC = () => {
 
   // 单一 hook 管理全部聊天状态与操作
   const chat = useAgentChat(agentId);
+  // 执行面板状态 (抽屉、Round、Tool、思考气泡)
+  const execStore = useExecutionStore();
 
   // markdown-it 实例（带 ECharts 插件），仅创建一次
   const mdRef = useRef(createMarkdownIt());
@@ -54,6 +60,22 @@ const AgentRun: React.FC = () => {
           className="chat-container"
           style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#f8f9fa', borderRadius: 8, marginBottom: 20 }}
         >
+          {/* ★ 执行面板切换按钮 (抽屉关闭时可见) */}
+          {!execStore.drawerVisible && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <Button
+                size="small"
+                icon={<ControlOutlined />}
+                onClick={() => execStore.openDrawer()}
+              >
+                执行过程 ▸
+              </Button>
+            </div>
+          )}
+
+          {/* ★ 思考气泡 (单例: 内容随执行节点刷新) */}
+          <ThinkingBubble />
+
           <ChatMessages
             currentSessionId={chat.currentSessionId}
             messages={chat.messages}
@@ -202,6 +224,9 @@ const AgentRun: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* ==================== 右侧：执行面板 (360px 抽屉) ==================== */}
+      <ExecutionDrawer />
 
       {/* ==================== 全屏报告弹窗 ==================== */}
       {chat.showFullscreenReport && chat.fullscreenReportContent && (
