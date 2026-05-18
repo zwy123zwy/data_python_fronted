@@ -24,3 +24,5 @@ Thumbs.db
 
 # TypeScript build info (incremental compilation cache)
 *.tsbuildinfo
+
+docs/
