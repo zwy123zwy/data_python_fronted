@@ -141,8 +141,8 @@ export function sendGraphRequest(
         }).catch(() => {});
       }
 
-      // 流完成后清除 nodeBlocks，思维链消失；重新加载的消息（用户消息 + 最终报告）接管展示
-      setState(sid, { isStreaming: false, closeStream: null, nodeBlocks: [] });
+      // 流完成后保留 nodeBlocks，思维链持续展示；下次发送时 doStreamRequest 会清空
+      setState(sid, { isStreaming: false, closeStream: null });
 
       message.success(`会话[${getSessionTitle()}]处理完成`);
 
