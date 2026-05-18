@@ -8,7 +8,7 @@ export type ToolStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped';
 /** Round (Agent 轮次) 执行状态 */
 export type RoundStatus = 'pending' | 'running' | 'done' | 'partial_failure' | 'error' | 'skipped';
 
-/** Agent 名称常量：对应后端的三个执行阶段 */
+/** Agent 名称常量：对应后端三个执行阶段 */
 export type AgentName = 'Explorer' | 'Analyst' | 'Reporter';
 
 /** 单次 Tool 调用记录 */
@@ -40,7 +40,7 @@ interface ExecutionState {
 
   // --- Round 管理 ---
   rounds: AgentRound[];
-  /** 查找或创建 round，agentName 已存在则返回已有 round，否则创建新 round 并设为 running */
+  /** 查找或创建 round，已存在返回已有实例，不存在则新建并更新 lastAgentName */
   upsertRound: (agentName: AgentName, roundIndex: number) => AgentRound;
   /** 更新指定 agent 的 round 状态 */
   updateRoundStatus: (agentName: AgentName, status: RoundStatus) => void;
@@ -56,7 +56,7 @@ interface ExecutionState {
   setThinking: (text: string, hint?: string) => void;
   clearThinking: () => void;
 
-  // --- tool 完成追踪 (用于 onComplete 标记最后 round 完成) ---
+  // --- 最后操作的 agent（供 onComplete 标记最后 round 为 done） ---
   lastAgentName: AgentName | null;
 
   // --- 生命周期 ---
@@ -66,8 +66,9 @@ interface ExecutionState {
   reset: () => void;
 }
 
-/** 生成简单唯一 id */
-const uid = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+/** 简单递增计数器，reset 时归零 */
+let _counter = 0;
+const uid = (): string => `${Date.now()}-${++_counter}-${Math.random().toString(36).slice(2, 5)}`;
 
 export const useExecutionStore = create<ExecutionState>((set, get) => ({
   // --- 抽屉控制 ---
@@ -89,7 +90,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
       status: 'running',
       tools: [],
     };
-    set((s) => ({ rounds: [...s.rounds, newRound] }));
+    set((s) => ({ rounds: [...s.rounds, newRound], lastAgentName: agentName }));
     return newRound;
   },
 
@@ -129,7 +130,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
     set({ thinkingText: '', thinkingHint: '' });
   },
 
-  // --- tool 完成追踪 ---
+  // --- 最后操作的 agent ---
   lastAgentName: null,
 
   // --- 生命周期 ---
@@ -152,6 +153,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   },
 
   reset() {
+    _counter = 0;
     set({
       rounds: [],
       thinkingText: '',
