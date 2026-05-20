@@ -3,9 +3,21 @@ import { App } from 'antd';
 import { agentService } from '../services/agent';
 import { chatService } from '../services/chat';
 import { useSessionStateStore } from '../stores/sessionStateStore';
-import { sendGraphRequest } from '../utils/streamRequest';
+import { resetStreamTextBuffer, sendGraphRequest } from '../utils/streamRequest';
 import { useExecutionStore } from '../stores/executionStore';
-import type { Agent, ChatSession, ChatMessage, GraphNodeResponse, GraphRequest } from '../types';
+import { useRunStore } from '../stores/runStore';
+import type {
+  Agent,
+  AgentForceMode,
+  AgentRuntime,
+  ChatSession,
+  ChatMessage,
+  GraphNodeResponse,
+  GraphRequest,
+} from '../types';
+
+const RUNTIME_STORAGE_KEY = 'data-agent-agent-runtime';
+const FORCE_MODE_STORAGE_KEY = 'data-agent-agent-force-mode';
 
 // ---- global helpers (install once) ----
 let globalHelpersInstalled = false;
@@ -68,6 +80,19 @@ export function useAgentChat(agentId: number) {
   const [pageSize, setPageSize] = useState(20);
   const [reportFormat, setReportFormat] = useState<'markdown' | 'html'>('markdown');
   const [inputControlsCollapsed, setInputControlsCollapsed] = useState(false);
+  // [阶段0] 开发用 runtime 开关，默认 v1
+  const [agentRuntime, setAgentRuntime] = useState<AgentRuntime>(() => {
+    if (typeof window === 'undefined') return 'v1';
+    const saved = localStorage.getItem(RUNTIME_STORAGE_KEY);
+    return saved === 'v2' ? 'v2' : 'v1';
+  });
+  // [阶段4] V2 强制 mode（开发）
+  const [forceMode, setForceMode] = useState<AgentForceMode>(() => {
+    if (typeof window === 'undefined') return 'auto';
+    const saved = localStorage.getItem(FORCE_MODE_STORAGE_KEY) as AgentForceMode | null;
+    const allowed: AgentForceMode[] = ['auto', 'smart_query', 'deep_research', 'report', 'chitchat'];
+    return saved && allowed.includes(saved) ? saved : 'auto';
+  });
 
   // 全屏报告
   const [showFullscreenReport, setShowFullscreenReport] = useState(false);
@@ -85,6 +110,10 @@ export function useAgentChat(agentId: number) {
   const humanFeedbackRef = useRef(humanFeedback);
   humanFeedbackRef.current = humanFeedback;
   const nl2sqlOnlyRef = useRef(nl2sqlOnly);
+  const agentRuntimeRef = useRef(agentRuntime);
+  agentRuntimeRef.current = agentRuntime;
+  const forceModeRef = useRef(forceMode);
+  forceModeRef.current = forceMode;
   nl2sqlOnlyRef.current = nl2sqlOnly;
   const inputQueryRef = useRef(inputQuery);
   inputQueryRef.current = inputQuery;
@@ -113,7 +142,7 @@ export function useAgentChat(agentId: number) {
     });
   }, [autoScroll]);
 
-  // 消息列表或流式块变化时触发滚动
+  // 消息列表或流式块变化时触发滚动（不含逐字流式文本，避免气泡闪烁）
   useEffect(() => {
     scrollToBottom();
   }, [messages, sessionState?.nodeBlocks, scrollToBottom]);
@@ -147,6 +176,7 @@ export function useAgentChat(agentId: number) {
     // 保留上次的 rejectCount，避免人机回路中拒绝累计次数被重置
     const prev = getState(sid);
 
+    resetStreamTextBuffer(sid);
     setState(sid, {
       isStreaming: true,
       // 人机回路恢复时保留旧 nodeBlocks，思维链不中断
@@ -155,6 +185,9 @@ export function useAgentChat(agentId: number) {
       htmlReportContent: '',
       htmlReportSize: 0,
       markdownReportContent: '',
+      streamingAssistantText: '',
+      streamingTextType: 'TEXT',
+      v2Timeline: [],
       closeStream: null,
       showHumanFeedback: false,
       rejectCount: prev?.rejectCount || 0,
@@ -231,6 +264,7 @@ export function useAgentChat(agentId: number) {
 
     // ★ 新请求开始前重置执行面板状态 (清空上一轮的 Round/Tool/思考气泡)
     useExecutionStore.getState().reset();
+    useRunStore.getState().reset();
 
     // 3. 发起 SSE 流式请求
     doStreamRequest({
@@ -239,6 +273,8 @@ export function useAgentChat(agentId: number) {
       humanFeedback: humanFeedbackRef.current,
       rejectedPlan: false,
       nl2sqlOnly: nl2sqlOnlyRef.current,
+      runtime: agentRuntimeRef.current,
+      forceMode: agentRuntimeRef.current === 'v2' ? forceModeRef.current : undefined,
     });
   }, [agentId, getState, doStreamRequest, saveMessage, message]);
 
@@ -254,6 +290,11 @@ export function useAgentChat(agentId: number) {
 
     // ★ 标记执行面板所有 running → skipped
     useExecutionStore.getState().stop();
+    useRunStore.getState().reset();
+    setState(currentSessionId, {
+      streamingAssistantText: '',
+      streamingTextType: 'TEXT',
+    });
 
     // 调用 AbortController 关闭 SSE 连接
     st.closeStream();
@@ -288,8 +329,20 @@ export function useAgentChat(agentId: number) {
       humanFeedbackContent: feedbackContent.trim() || 'Accept',
       rejectedPlan: !approved,
       nl2sqlOnly: st.lastRequest?.nl2sqlOnly || false,
+      runtime: st.lastRequest?.runtime || agentRuntimeRef.current,
+      forceMode: st.lastRequest?.forceMode || forceModeRef.current,
     }, true);
   }, [agentId, currentSessionId, getState, setState, doStreamRequest]);
+
+  const setAgentRuntimePersist = useCallback((value: AgentRuntime) => {
+    setAgentRuntime(value);
+    localStorage.setItem(RUNTIME_STORAGE_KEY, value);
+  }, []);
+
+  const setForceModePersist = useCallback((value: AgentForceMode) => {
+    setForceMode(value);
+    localStorage.setItem(FORCE_MODE_STORAGE_KEY, value);
+  }, []);
 
   // ---- 点击预设问题 → 创建新会话并发送 ----
   const handlePresetQuestionClick = useCallback(async (question: string) => {
@@ -422,6 +475,8 @@ export function useAgentChat(agentId: number) {
     sessionState,
     inputQuery, setInputQuery,
     humanFeedback, setHumanFeedback,
+    agentRuntime, setAgentRuntime: setAgentRuntimePersist,
+    forceMode, setForceMode: setForceModePersist,
     nl2sqlOnly, autoScroll, setAutoScroll,
     showSqlResults, setShowSqlResults,
     pageSize, setPageSize,

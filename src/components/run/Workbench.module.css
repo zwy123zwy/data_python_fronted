@@ -1,0 +1,72 @@
+/* [阶段3] Workbench 侧栏 */
+
+.workbench {
+  display: flex;
+  flex-direction: column;
+  width: var(--workbench-width);
+  min-width: var(--workbench-width);
+  border-left: 1px solid var(--workbench-border);
+  background: var(--workbench-bg);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-base) var(--space-md);
+  border-bottom: 1px solid var(--border-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.phase {
+  font-weight: var(--font-weight-normal);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.section {
+  padding: var(--space-sm);
+}
+
+.thinking {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.clarify {
+  margin-top: var(--space-sm);
+  color: var(--warning-color);
+  font-size: var(--font-size-sm);
+}
+
+.stepList {
+  list-style: none;
+  padding: var(--space-sm);
+  margin: 0;
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--border-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.status {
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.summary {
+  color: var(--text-tertiary);
+}
+
+.muted {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}

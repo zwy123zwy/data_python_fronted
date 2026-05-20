@@ -1,0 +1,73 @@
+/* [阶段0] 执行侧栏布局与开合动画，尺寸 token 见 global.css --workbench-* */
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--workbench-bg, var(--bg-primary));
+  transition: var(--workbench-transition);
+}
+
+.drawerOpen {
+  width: var(--workbench-width);
+  min-width: var(--workbench-width);
+  border-left: 1px solid var(--workbench-border, var(--border-primary));
+}
+
+.drawerClosed {
+  width: 0;
+  min-width: 0;
+  border-left: none;
+}
+
+.header {
+  padding: var(--space-base) var(--space-md);
+  border-bottom: 1px solid var(--border-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.progress {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: var(--font-weight-normal);
+}
+
+.doneBanner {
+  padding: 6px 0;
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--success-color);
+  border-bottom: 1px solid var(--border-tertiary);
+  flex-shrink: 0;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-base);
+}
+
+.empty {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--space-3xl);
+}
+
+@media (max-width: 1439px) {
+  .drawerOpen {
+    width: var(--workbench-width-md);
+    min-width: var(--workbench-width-md);
+  }
+}

@@ -49,6 +49,8 @@ interface ExecutionState {
    * V2.0 线性流水线：新 tool 加入时自动将同 Round 内上一 running tool 标记为 done
    */
   addToolCall: (agentName: AgentName, tool: ToolCall) => void;
+  /** [阶段1] V2 tool.result：将指定 Tool 从 running 更新为 done/error */
+  updateToolCallStatus: (agentName: AgentName, toolName: string, status: ToolStatus, summary?: string) => void;
 
   // --- 思考气泡 ---
   thinkingText: string;
@@ -121,6 +123,22 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
         return { ...r, tools: [...updatedTools, toolWithId] };
       }),
       lastAgentName: agentName,
+    }));
+  },
+
+  updateToolCallStatus(agentName: AgentName, toolName: string, status: ToolStatus, summary?: string) {
+    set((s) => ({
+      rounds: s.rounds.map((r) => {
+        if (r.agentName !== agentName) return r;
+        return {
+          ...r,
+          tools: r.tools.map((t) =>
+            t.name === toolName && t.status === 'running'
+              ? { ...t, status, summary: summary ?? t.summary, finishedAt: Date.now() }
+              : t,
+          ),
+        };
+      }),
     }));
   },
 

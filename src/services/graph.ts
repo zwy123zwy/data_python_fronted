@@ -56,6 +56,11 @@ export function streamSearch(
   if (request.humanFeedbackContent) params.set('humanFeedbackContent', request.humanFeedbackContent);
   params.set('rejectedPlan', String(request.rejectedPlan));
   params.set('nl2sqlOnly', String(request.nl2sqlOnly));
+  // [阶段0] V2 运行时开关，默认 v1
+  params.set('runtime', request.runtime ?? 'v1');
+  if (request.runtime === 'v2' && request.forceMode && request.forceMode !== 'auto') {
+    params.set('forceMode', request.forceMode);
+  }
 
   const url = `/api/stream/search?${params.toString()}`;
 
@@ -127,6 +132,25 @@ export function streamSearch(
           // default "message" event
           try {
             const data: GraphNodeResponse = JSON.parse(ev.data);
+            // [阶段1] V2 run.complete 无 event: complete 帧，需在此结束流
+            if (data.complete === true || data.eventType === 'run.complete') {
+              await handlers.onMessage(data);
+              completed = true;
+              cancelReader();
+              await handlers.onComplete?.();
+              return;
+            }
+            if (data.eventType === 'error') {
+              await handlers.onMessage(data);
+              completed = true;
+              cancelReader();
+              const errMsg =
+                typeof data.error === 'string'
+                  ? data.error
+                  : data.summary || data.text || 'Stream error';
+              await handlers.onError?.(errMsg);
+              return;
+            }
             await handlers.onMessage(data);
           } catch {
             await handlers.onError?.('Failed to parse server response');
@@ -144,8 +168,16 @@ export function streamSearch(
         const { done, value } = await reader.read();
         if (done) {
           if (!completed && !stopped) {
-            // Stream ended unexpectedly → reconnect
-            scheduleReconnect();
+            // [阶段1] 处理 buffer 中未刷新的最后一帧
+            if (buffer.trim()) {
+              const tailEvents = parseSSELines(buffer + '\n\n');
+              if (tailEvents.length > 0) {
+                await processEvents(tailEvents);
+              }
+            }
+            if (!completed && !stopped) {
+              scheduleReconnect();
+            }
           }
           break;
         }

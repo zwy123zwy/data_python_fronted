@@ -9,6 +9,8 @@ import MarkdownIt from 'markdown-it';
 import { presetQuestionService } from '../../services/presetQuestion';
 import PresetQuestions from './PresetQuestions';
 import ChainOfThought from './ChainOfThought';
+import V2ThinkingTimeline from './V2ThinkingTimeline';
+import type { V2TimelineEntry } from '../../types/v2Timeline';
 import ResultSetDisplay from './ResultSetDisplay';
 import ReportHtmlView from './ReportHtmlView';
 import type { ChatMessage, GraphNodeResponse, ResultData, PresetQuestion } from '../../types';
@@ -31,6 +33,10 @@ interface Props {
   onGetMarkdownFromBlock: (nodes: GraphNodeResponse[]) => string;
   onPresetQuestionClick: (question: string) => void;
   isStreaming: boolean;
+  streamingAssistantText?: string;
+  streamingTextType?: string;
+  /** [阶段5] V2 思考时间线（合并 Gateway + 工具步骤） */
+  v2Timeline?: V2TimelineEntry[];
 }
 
 const ChatMessages: React.FC<Props> = ({
@@ -49,10 +55,24 @@ const ChatMessages: React.FC<Props> = ({
   onGetMarkdownFromBlock,
   onPresetQuestionClick,
   isStreaming,
+  streamingAssistantText = '',
+  streamingTextType = 'TEXT',
+  v2Timeline = [],
 }) => {
   const { message } = App.useApp();
 
   const isEmpty = !currentSessionId && !isStreaming && messages.length === 0;
+
+  // [阶段5] 本轮助手回复须在思考时间线之后，避免落库后思考区跑到结果下方
+  const hasV2Timeline = v2Timeline.length > 0;
+  let turnAssistant: ChatMessage | null = null;
+  if (hasV2Timeline && !isStreaming && messages.length > 0) {
+    const last = messages[messages.length - 1];
+    if (last.role === 'assistant') {
+      turnAssistant = last;
+    }
+  }
+  const skipMessageId = turnAssistant?.id;
 
   return (
     <>
@@ -68,6 +88,8 @@ const ChatMessages: React.FC<Props> = ({
       {currentSessionId && (
         <div className="messages-area" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {messages.map((msg) => {
+            if (skipMessageId && msg.id === skipMessageId) return null;
+
             // Report messages with header
             if (msg.messageType === 'markdown-report') {
               return (
@@ -227,7 +249,16 @@ const ChatMessages: React.FC<Props> = ({
             );
           })}
 
-          {/* 思维链：流式节点执行过程（流式进行中 + 流式结束后保留展示） */}
+          {/* [阶段5] V2 思考时间线（始终在当轮结果气泡之上） */}
+          {hasV2Timeline && (
+            <V2ThinkingTimeline
+              entries={v2Timeline}
+              isStreaming={isStreaming}
+              pageSize={pageSize}
+            />
+          )}
+
+          {/* 中间产物：SQL / 结果表（在最终文字回复之前） */}
           {nodeBlocks.length > 0 && (
             <ChainOfThought
               nodeBlocks={nodeBlocks}
@@ -239,6 +270,92 @@ const ChatMessages: React.FC<Props> = ({
               onGetMarkdownFromBlock={onGetMarkdownFromBlock}
             />
           )}
+
+          {/* [阶段5] LLM 逐字流式气泡 */}
+          {isStreaming && (
+            <div
+              className="message-container assistant streaming-reply"
+              style={{
+                display: 'flex',
+                gap: 12,
+                maxWidth: '100%',
+                justifyContent: 'flex-start',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div className="message-avatar" style={{ flexShrink: 0 }}>
+                <Avatar size={32} style={{ background: '#52c41a' }}>AI</Avatar>
+              </div>
+              <div
+                className="message-text streaming-text"
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  lineHeight: 1.6,
+                  maxWidth: '80%',
+                  minHeight: 40,
+                  background: '#fff',
+                  border: '1px solid #e8e8e8',
+                  color: '#303133',
+                }}
+              >
+                {streamingAssistantText ? (
+                  /* 流式阶段用纯文本，避免每字重跑 markdown 导致突变 */
+                  <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {streamingAssistantText}
+                  </span>
+                ) : (
+                  <span style={{ color: '#909399' }}>正在回复…</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isStreaming && turnAssistant && (() => {
+            const msg = turnAssistant;
+            const avatarEl = (
+              <div className="message-avatar" style={{ flexShrink: 0 }}>
+                <Avatar size={32} style={{ background: '#52c41a' }}>AI</Avatar>
+              </div>
+            );
+            const bubbleCol = (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '80%' }}>
+                <div
+                  className="message-text"
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 12,
+                    lineHeight: 1.5,
+                    wordWrap: 'break-word',
+                    background: '#fff',
+                    color: '#303133',
+                    border: '1px solid #e8e8e8',
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html: msg.messageType === 'text'
+                      ? msg.content.replace(/\n/g, '<br>')
+                      : msg.content,
+                  }}
+                />
+              </div>
+            );
+            return (
+              <div
+                key={msg.id}
+                className="message-container assistant turn-reply"
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  maxWidth: '100%',
+                  justifyContent: 'flex-start',
+                  alignItems: 'flex-start',
+                }}
+              >
+                {avatarEl}
+                {bubbleCol}
+              </div>
+            );
+          })()}
         </div>
       )}
     </>

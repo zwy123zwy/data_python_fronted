@@ -1,0 +1,37 @@
+/* [阶段2] ArtifactPanel 样式 */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.empty {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--space-md);
+}
+
+.card {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  background: var(--bg-primary);
+}
+
+.title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.pre {
+  font-size: var(--font-size-xs);
+  overflow: auto;
+  max-height: 200px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

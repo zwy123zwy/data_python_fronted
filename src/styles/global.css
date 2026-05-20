@@ -125,6 +125,13 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+
+  /* Workbench / 执行侧栏（见 docs/03-FRONTEND.md §6.5） */
+  --workbench-width: 360px;
+  --workbench-width-md: 320px;
+  --workbench-bg: var(--bg-primary);
+  --workbench-border: var(--border-primary);
+  --workbench-transition: width 0.3s ease, min-width 0.3s ease;
 }
 
 /* 全局重置 */
@@ -1333,6 +1340,12 @@ body {
   .btn {
     border: 2px solid currentColor;
   }
+}
+
+/* [阶段5] 流式回复气泡：限制重排范围，减轻逐字更新时的跳动 */
+.streaming-reply .streaming-text {
+  contain: layout style;
+  word-break: break-word;
 }
 
 /* 减少动画模式支持 */

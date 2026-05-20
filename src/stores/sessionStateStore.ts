@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { GraphNodeResponse } from '@/types';
+import type { V2TimelineEntry } from '@/types/v2Timeline';
 
 export interface SessionState {
   isStreaming: boolean;
@@ -20,6 +21,11 @@ export interface SessionState {
   currentThreadId: string;
   rejectCount: number;
   showHumanFeedback: boolean;
+  /** [阶段5] LLM 流式逐字输出（主聊天气泡） */
+  streamingAssistantText: string;
+  streamingTextType: string;
+  /** [阶段5] V2 思考时间线（主对话区，合并 Gateway + 工具步骤） */
+  v2Timeline: V2TimelineEntry[];
 }
 
 interface SessionStateStore {
@@ -41,6 +47,9 @@ const EMPTY_STATE: SessionState = {
   currentThreadId: '',
   rejectCount: 0,
   showHumanFeedback: false,
+  streamingAssistantText: '',
+  streamingTextType: 'TEXT',
+  v2Timeline: [],
 };
 
 export const useSessionStateStore = create<SessionStateStore>((set, get) => ({

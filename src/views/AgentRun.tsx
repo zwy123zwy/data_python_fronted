@@ -13,7 +13,7 @@ import ChatSessionSidebar from '../components/run/ChatSessionSidebar';
 import ChatMessages from '../components/run/ChatMessages';
 import HumanFeedback from '../components/run/HumanFeedback';
 import ReportHtmlView from '../components/run/ReportHtmlView';
-import ExecutionDrawer from '../components/run/ExecutionDrawer';
+import Workbench from '../components/run/Workbench';
 import ThinkingBubble from '../components/run/ThinkingBubble';
 import { useExecutionStore } from '../stores/executionStore';
 import { useAgentChat } from '../hooks/useAgentChat';
@@ -60,8 +60,8 @@ const AgentRun: React.FC = () => {
           className="chat-container"
           style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#f8f9fa', borderRadius: 8, marginBottom: 20 }}
         >
-          {/* ★ 执行面板切换按钮 (抽屉关闭时可见) */}
-          {!execStore.drawerVisible && (
+          {/* ★ V1 执行面板切换（V2 使用 Workbench） */}
+          {chat.agentRuntime !== 'v2' && !execStore.drawerVisible && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
               <Button
                 size="small"
@@ -73,8 +73,7 @@ const AgentRun: React.FC = () => {
             </div>
           )}
 
-          {/* ★ 思考气泡 (单例: 内容随执行节点刷新) */}
-          <ThinkingBubble />
+          {chat.agentRuntime !== 'v2' && <ThinkingBubble />}
 
           <ChatMessages
             currentSessionId={chat.currentSessionId}
@@ -92,6 +91,9 @@ const AgentRun: React.FC = () => {
             onGetMarkdownFromBlock={chat.getMarkdownFromBlock}
             onPresetQuestionClick={chat.handlePresetQuestionClick}
             isStreaming={chat.sessionState?.isStreaming || false}
+            streamingAssistantText={chat.sessionState?.streamingAssistantText}
+            streamingTextType={chat.sessionState?.streamingTextType}
+            v2Timeline={chat.sessionState?.v2Timeline}
           />
         </div>
 
@@ -140,6 +142,33 @@ const AgentRun: React.FC = () => {
                       />
                     </Tooltip>
                   </div>
+                  {/* [阶段0] V2 运行时（开发） */}
+                  <div className="switch-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="switch-label" style={{ fontSize: 14, color: '#606266' }}>Runtime V2</span>
+                    <Switch
+                      checked={chat.agentRuntime === 'v2'}
+                      onChange={(checked) => chat.setAgentRuntime(checked ? 'v2' : 'v1')}
+                      disabled={!!chat.sessionState?.isStreaming}
+                    />
+                  </div>
+                  {chat.agentRuntime === 'v2' && (
+                    <div className="switch-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="switch-label" style={{ fontSize: 14, color: '#606266' }}>V2 模式</span>
+                      <Select
+                        value={chat.forceMode}
+                        onChange={chat.setForceMode}
+                        disabled={!!chat.sessionState?.isStreaming}
+                        style={{ width: 140 }}
+                        options={[
+                          { value: 'auto', label: '自动 (Gateway)' },
+                          { value: 'smart_query', label: '智能问数' },
+                          { value: 'deep_research', label: '深度研究' },
+                          { value: 'report', label: '报告' },
+                          { value: 'chitchat', label: '闲聊' },
+                        ]}
+                      />
+                    </div>
+                  )}
                   {/* 仅 NL2SQL 开关 */}
                   <div className="switch-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="switch-label" style={{ fontSize: 14, color: '#606266' }}>仅NL2SQL</span>
@@ -226,7 +255,7 @@ const AgentRun: React.FC = () => {
       </main>
 
       {/* ==================== 右侧：执行面板 (360px 抽屉) ==================== */}
-      <ExecutionDrawer />
+      <Workbench useV2Workbench={chat.agentRuntime === 'v2'} />
 
       {/* ==================== 全屏报告弹窗 ==================== */}
       {chat.showFullscreenReport && chat.fullscreenReportContent && (
